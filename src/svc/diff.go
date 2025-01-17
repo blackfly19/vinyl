@@ -1,39 +1,35 @@
 package main
 
-import "fmt"
+func encode(originalFile []byte, updatedFile []byte, blockSize int) int {
 
-func diff(originalFile string, updatedFile string, og_len int, ud_len int) int{
+	prime := 65521
+	hashmap := make(map[int]int)
 
-	var solution = make([][]int,og_len)
-
-	for iter := range solution {
-		solution[iter] = make([]int, ud_len)
-	}
-	
-	for iter:=0;iter < og_len;iter++ {
-		solution[iter][0] = 0
+	for i := 0; i < len(originalFile); i = i + blockSize {
+		hashmap[adler32(originalFile[i:i+blockSize], blockSize, prime)] = i
 	}
 
-	for iter:=0;iter < ud_len;iter++ {
-		solution[0][iter] = 0
-	}
+	initialHash := adler32(updatedFile[:blockSize], blockSize, prime)
 
-	for i:=1;i<og_len;i++ {
-		for j:=1;j<ud_len;j++ {
-			if originalFile[i] == updatedFile[j] {
-				solution[i][j] = 1 + solution[i-1][j-1]
-			} else {
-				solution[i][j] = max(solution[i-1][j], solution[i][j-1]) 
-			}
-		}
+	for i := blockSize; i < len(updatedFile); i++ {
+		if hashmap
 	}
-	//fmt.Println(solution)
-	return solution[og_len-1][ud_len-1]
 }
 
-func main() {
-	str1 := "Ankit is an amazing guy"
-	str2 := "Ankit is a great guy"
+func rollingHash(hash int, data []byte, blockSize int, prime int, pos int) int {
 
-	fmt.Println(diff(str1,str2,len(str1),len(str2)))
+	s1 := (hash - int(data[pos-blockSize]+data[pos])) % prime
+	s2 := (hash - blockSize*int(data[pos-blockSize]) + s1) % prime
+	return s2<<16 + s1
+}
+
+func adler32(data []byte, blockSize int, prime int) int {
+	s1 := 1
+	s2 := 0
+
+	for i := 0; i < blockSize; i++ {
+		s1 = (s1 + int(data[i])) % prime
+		s2 = (s2 + s1) % prime
+	}
+	return s2<<16 + s1
 }
