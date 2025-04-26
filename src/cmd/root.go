@@ -7,9 +7,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:     "svc",
+	Use:     "qwe",
 	Short:   "Keep track of history of documents",
-	Version: "v0.0.1",
+	Version: "v0.1.0",
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},

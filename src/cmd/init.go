@@ -1,62 +1,47 @@
 package cmd
 
 import (
-	"archive/zip"
 	"fmt"
-	"io/fs"
-	"os"
-	"path/filepath"
-	"strings"
-
+	"github.com/blackfly19/vcs/src/qwe"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 var initCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initializes new repository",
-	RunE:  initfunc,
+	RunE:  initFunc,
 }
 
-func initfunc(cmd *cobra.Command, args []string) error {
+func initFunc(cmd *cobra.Command, args []string) error {
 
-	err := os.Mkdir(".svc", os.ModePerm)
+	// Create hidden directory for qwe
+	err := os.Mkdir(".qwe", os.ModePerm)
 	if err != nil {
-
 		return err
 	}
+
+	//Create object directory to store objects
+	err = os.Mkdir(".qwe/objects", os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	err = os.Mkdir(".qwe/diffobjects", os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	//Initializing file hashes
+	err = qwe.WriteFileHashToDisk(".qwe/filehashes.gob", make(map[string]qwe.FileMetaData))
+	if err != nil {
+		return err
+	}
+
+	//Initializing commit tree
+	qwe.InitializeTree()
 
 	fmt.Println("New empty repository initialized.")
-	initSnap, err := os.Create(".svc/v1.zip")
-	if err != nil {
-		return err
-	}
-	defer initSnap.Close()
-
-	zipWriter := zip.NewWriter(initSnap)
-	defer zipWriter.Close()
-
-	err = filepath.Walk(".", func(path string, info fs.FileInfo, err error) error {
-		if err != nil {
-			fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", path, err)
-			return err
-		}
-		if info.IsDir() && info.Name() == ".svc" {
-			return filepath.SkipDir
-		}
-
-		file, err := os.ReadFile(path)
-
-		if !info.IsDir() {
-			writer, err := zipWriter.Create(strings.TrimPrefix(path, "./"))
-			if err != nil {
-				return err
-			}
-
-			_, err = writer.Write(file)
-		}
-		fmt.Printf("visited file or dir: %q\n", path)
-		return nil
-	})
 
 	return nil
 }
