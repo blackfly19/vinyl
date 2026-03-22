@@ -13,7 +13,11 @@ var logCmd = &cobra.Command{
 }
 
 func logFunc(cmd *cobra.Command, args []string) error {
-	tree := qwe.ReadTreeFromDisk(".qwe/committree.gob")
+	tree := qwe.NewTree()
+	err := tree.ReadFromDisk()
+	if err != nil {
+		return err
+	}
 
 	treeTraversal(tree.Root)
 	return nil
@@ -24,7 +28,7 @@ func treeTraversal(node *qwe.Commit) {
 		return
 	}
 
-	fmt.Printf("%s %s", node.CommitID, node.Message)
+	fmt.Printf("%s\t%s\n", node.CommitID, node.Message)
 	for _, childNode := range node.ChildNodeAddress {
 		treeTraversal(childNode)
 	}

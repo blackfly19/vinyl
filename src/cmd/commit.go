@@ -1,13 +1,12 @@
 package cmd
 
 import (
-	"bytes"
-	"crypto/md5"
-	"fmt"
-	"log"
-	"os"
-
 	"github.com/blackfly19/godiff/diff"
+	"github.com/blackfly19/vcs/src/constants"
+	"os"
+	"path/filepath"
+	"reflect"
+
 	"github.com/blackfly19/vcs/src/qwe"
 	"github.com/spf13/cobra"
 )
@@ -15,100 +14,119 @@ import (
 var commitCmd = &cobra.Command{
 	Use:   "commit",
 	Short: "Creates a new commit for the files",
-	RunE:  commit,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		checkpoint, err := cmd.Flags().GetBool("checkpoint")
+		if err != nil {
+			return err
+		}
+
+		message, err := cmd.Flags().GetString("message")
+		if err != nil {
+			return err
+		}
+
+		err = commit(message, checkpoint)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
 }
 
-func commit(cmd *cobra.Command, args []string) error {
+func commit(message string, checkpoint bool) error {
 
-	stagingFile, err := os.Open(".qwe/staging.gob")
-	if err != nil {
-		return err
-	}
-	defer func(stagingFile *os.File) {
-		err := stagingFile.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}(stagingFile)
+	var commitID string
+	stagingMap := qwe.NewMapHandler[qwe.FileMetaData](constants.FILE_STAGING)
+	fileMap := qwe.NewMapHandler[qwe.FileMetaData](constants.FILE_FILEHASH)
+	diffFileMap := qwe.NewMapHandler[string](constants.DIR_DIFF_MAP)
+	tree := qwe.NewTree()
+	stateTree := qwe.NewMerkleTree()
 
-	stagingFileMap := make(map[string]qwe.FileMetaData)
-	fileHashMap := make(map[string]bool)
-	diffFileHashMap := make(map[string]bool)
-
-	err = qwe.GobDecoder(stagingFile, &stagingFileMap)
+	err := stagingMap.ReadFromDisk()
 	if err != nil {
 		return err
 	}
 
-	tree := qwe.ReadTreeFromDisk(".qwe/committree.gob")
-
-	filePathMetadataMap, err := qwe.ReadFileHashFromDisk(".qwe/filehashes.gob")
+	err = fileMap.ReadFromDisk()
 	if err != nil {
 		return err
 	}
 
-	checkpoint, err := cmd.Flags().GetBool("checkpoint")
+	err = tree.ReadFromDisk()
 	if err != nil {
 		return err
 	}
 
-	message, err := cmd.Flags().GetString("message")
-	if err != nil {
-		return err
-	}
+	stateTree.CreateSnapshot(".")
 
-	for path, fileMetaData := range stagingFileMap {
+	commitID = qwe.GenerateCommitID(stateTree.Root.CompHash, message)
 
-		updatedFile, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
+	diffFileMap.FilePath = diffFileMap.FilePath + commitID
 
-		// Fix diff file logic
-		if checkpoint && tree.Root != nil {
-			var originalFile *bytes.Buffer
-			var objectFilePath = ".qwe/objects/" + filePathMetadataMap[path].FileContentMD5Hash + ".gob"
+	for path, fileMetaData := range stagingMap.FileMap {
 
-			objectFile, err := os.Open(objectFilePath)
-
-			err = qwe.GobDecoder(objectFile, originalFile)
+		if reflect.ValueOf(fileMetaData).IsZero() {
+			delete(fileMap.FileMap, path)
+		} else {
+			updatedFile, err := os.ReadFile(path)
 			if err != nil {
 				return err
 			}
 
-			diffFile := diff.Encode(originalFile.Bytes(), updatedFile, 8)
-			diffFileName := fmt.Sprintf("%x", md5.Sum(diffFile))
-
-			err = os.WriteFile(".qwe/diffobjects/"+diffFileName, diffFile, 0644)
+			err = qwe.CreateDataObjects(updatedFile, fileMetaData.FileContentMD5Hash)
 			if err != nil {
 				return err
 			}
 
-			diffFileHashMap[diffFileName] = true
+			if !checkpoint && tree.Root != nil {
+				var originalFile []byte
+				var objectFilePath = constants.DIR_OBJECTS + fileMap.FileMap[path].FileContentMD5Hash
+
+				objectFile, err := os.Open(objectFilePath)
+
+				err = qwe.GobDecoder(objectFile, &originalFile)
+				if err != nil {
+					return err
+				}
+
+				diffFile := diff.Encode(updatedFile, originalFile, 8)
+				diffFilePath := constants.DIR_DIFF + filepath.Base(objectFile.Name())
+
+				err = os.WriteFile(diffFilePath, diffFile, 0644)
+				if err != nil {
+					return err
+				}
+
+				diffFileMap.FileMap[diffFilePath] = path
+			}
 		}
 
-		err = qwe.CreateDataObjects(updatedFile, fileMetaData.FileContentMD5Hash)
-		if err != nil {
-			return err
-		}
-
-		filePathMetadataMap[path] = fileMetaData
-		fileHashMap[fileMetaData.FileContentMD5Hash] = true
+		fileMap.FileMap[path] = fileMetaData
 	}
 
-	/*if tree.Root != nil {
-		tree.Head.DiffFileMap = diffFileHashMap
-	}*/
-
-	tree.AddCommitToTree(fileHashMap, diffFileHashMap, checkpoint, message)
-	qwe.WriteTreeToDisk(tree)
-
-	err = qwe.WriteFileHashToDisk(".qwe/filehashes.gob", filePathMetadataMap)
+	tree.AddCommitToTree(commitID, checkpoint, message)
+	err = tree.WriteToDisk()
 	if err != nil {
 		return err
 	}
 
-	err = os.Remove(stagingFile.Name())
+	err = fileMap.WriteToDisk()
+	if err != nil {
+		return err
+	}
+
+	err = os.Remove(stagingMap.FilePath)
+	if err != nil {
+		return err
+	}
+
+	err = stateTree.WriteToDisk(commitID)
+	if err != nil {
+		return err
+	}
+
+	err = diffFileMap.WriteToDisk()
 	if err != nil {
 		return err
 	}

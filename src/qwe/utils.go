@@ -1,25 +1,27 @@
 package qwe
 
 import (
-	"encoding/gob"
-	"os"
+	"crypto/md5"
+	"encoding/hex"
 )
 
-func GobEncoder[T any](file *os.File, object T) error {
-	encoder := gob.NewEncoder(file)
-	err := encoder.Encode(object)
-	if err != nil {
-		return err
-	}
-	return nil
+type md5Type interface {
+	~string | ~[]byte
 }
 
-func GobDecoder[T any](file *os.File, object *T) error {
-
-	decoder := gob.NewDecoder(file)
-	err := decoder.Decode(object)
-	if err != nil {
-		return err
+func CalculateMD5[T md5Type](input T) string {
+	switch v := any(input).(type) {
+	case []byte:
+		newHash := md5.Sum(v)
+		return hex.EncodeToString(newHash[:])
+	case string:
+		newHash := md5.Sum([]byte(v))
+		return hex.EncodeToString(newHash[:])
+	default:
+		panic("Invalid type")
 	}
-	return nil
+}
+
+func GenerateCommitID(rootHash string, commitMessage string) string {
+	return CalculateMD5(rootHash + commitMessage)
 }

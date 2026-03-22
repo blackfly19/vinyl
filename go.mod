@@ -3,7 +3,7 @@ module github.com/blackfly19/vcs
 go 1.23.5
 
 require (
-	github.com/blackfly19/godiff v0.1.3
+	github.com/blackfly19/godiff v0.1.4
 	github.com/spf13/cobra v1.9.1
 )
 

@@ -1,67 +1,112 @@
 package qwe
 
 import (
-	"crypto/md5"
-	"encoding/hex"
-	"fmt"
+	"github.com/blackfly19/vcs/src/constants"
+	"os"
 	"time"
 )
 
-type Commit struct {
-	CommitID      string
-	CommitFileMap map[string]bool
-	DiffFileMap   map[string]bool
-	Datetime      string
-	Checkpoint    bool
-	Message       string
-	//ParentNodeAddress *Commit `gob:"-"`
-	ChildNodeAddress []*Commit
-}
-
 type CommitTree struct {
-	Root *Commit
-	Head *Commit
+	Root         *Commit
+	HeadCommitID string
 }
 
-func GenerateCommitID() string {
-	newHash := md5.Sum([]byte(time.Now().String()))
-	return hex.EncodeToString(newHash[:])
+func NewTree() *CommitTree {
+	return new(CommitTree)
 }
 
-func InitializeTree() {
-	tree := new(CommitTree)
-	WriteTreeToDisk(tree)
-}
+func (tree *CommitTree) AddCommitToTree(commitID string, checkpoint bool, message string) {
 
-func (tree *CommitTree) AddCommitToTree(commitFileMap map[string]bool, diffFileMap map[string]bool, checkpoint bool, message string) {
-
-	commitID := GenerateCommitID()
-	fmt.Println(commitID)
-
-	newNode := &Commit{CommitID: commitID, CommitFileMap: commitFileMap, DiffFileMap: diffFileMap, Checkpoint: checkpoint, Datetime: time.Now().String(), Message: message} // ParentNodeAddress: nil}
+	newNode := &Commit{CommitID: commitID, Checkpoint: checkpoint, Datetime: time.Now().String(), Message: message} // ParentNodeAddress: nil}
 
 	if tree.Root == nil {
 		tree.Root = newNode
-		tree.Head = newNode
+		tree.HeadCommitID = commitID
 	} else {
-		tree.Head = findHead(tree.Root, tree.Head.CommitID)
-		tree.Head.ChildNodeAddress = append(tree.Head.ChildNodeAddress, newNode)
-		tree.Head = newNode
+		head := AssignHead(tree.Root, tree.HeadCommitID)
+		head.ChildNodeAddress = append(head.ChildNodeAddress, newNode)
+		head = newNode
+		tree.HeadCommitID = commitID
 	}
 }
 
-func findHead(root *Commit, head string) *Commit {
+func (tree *CommitTree) WriteToDisk() error {
+	binary, err := os.OpenFile(constants.FILE_COMMITTREE, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		return err
+	}
+	defer func(binary *os.File) {
+		err = binary.Close()
+	}(binary)
+	if err != nil {
+		return err
+	}
 
+	err = GobEncoder(binary, tree)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (tree *CommitTree) ReadFromDisk() error {
+	binary, err := os.Open(constants.FILE_COMMITTREE)
+	if err != nil {
+		return err
+	}
+	defer func(binary *os.File) {
+		err = binary.Close()
+	}(binary)
+	if err != nil {
+		return err
+	}
+
+	err = GobDecoder(binary, tree)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func RebuildPointers(root *Commit, headCommitID string) *Commit {
+
+	var node *Commit
 	if root == nil {
 		return nil
 	}
 
-	if root.CommitID == head {
+	if root.CommitID == headCommitID {
 		return root
 	}
 
 	for _, child := range root.ChildNodeAddress {
-		node := findHead(child, head)
+		if node == nil {
+			node = RebuildPointers(child, headCommitID)
+		}
+		child.parentNodeAddress = root
+	}
+
+	if node != nil {
+		return node
+	}
+
+	return nil
+}
+
+func AssignHead(root *Commit, headCommitID string) *Commit {
+	if root == nil {
+		return nil
+	}
+
+	if root.CommitID == headCommitID {
+		return root
+	}
+
+	for _, child := range root.ChildNodeAddress {
+		node := AssignHead(child, headCommitID)
 		if node != nil {
 			return node
 		}

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/blackfly19/vcs/src/constants"
 	"github.com/blackfly19/vcs/src/qwe"
 	"github.com/spf13/cobra"
 	"os"
@@ -16,30 +17,44 @@ var initCmd = &cobra.Command{
 func initFunc(cmd *cobra.Command, args []string) error {
 
 	// Create hidden directory for qwe
-	err := os.Mkdir(".qwe", os.ModePerm)
+	err := os.Mkdir(constants.DIR_QWE, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
 	//Create object directory to store objects
-	err = os.Mkdir(".qwe/objects", os.ModePerm)
+	err = os.Mkdir(constants.DIR_OBJECTS, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	err = os.Mkdir(".qwe/diffobjects", os.ModePerm)
+	//
+	err = os.Mkdir(constants.DIR_DIFF, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	err = os.Mkdir(constants.DIR_STATE_TREE, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	err = os.Mkdir(constants.DIR_DIFF_MAP, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
 	//Initializing file hashes
-	err = qwe.WriteFileHashToDisk(".qwe/filehashes.gob", make(map[string]qwe.FileMetaData))
+	err = qwe.NewMapHandler[qwe.FileMetaData](constants.FILE_FILEHASH).WriteToDisk()
 	if err != nil {
 		return err
 	}
 
 	//Initializing commit tree
-	qwe.InitializeTree()
+	err = qwe.NewTree().WriteToDisk()
+	if err != nil {
+		return err
+	}
 
 	fmt.Println("New empty repository initialized.")
 

@@ -1,12 +1,13 @@
 package qwe
 
 import (
+	"github.com/blackfly19/vcs/src/constants"
 	"os"
 )
 
 func CreateDataObjects(fileContent []byte, fileName string) error {
 
-	file, err := os.Create(".qwe/objects/" + fileName + ".gob")
+	file, err := os.Create(constants.DIR_OBJECTS + fileName)
 	if err != nil {
 		return err
 	}

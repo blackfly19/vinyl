@@ -1,6 +1,7 @@
 package qwe
 
 import (
+	"errors"
 	"os"
 	"time"
 )
@@ -10,41 +11,43 @@ type FileMetaData struct {
 	LastModifiedTime   time.Time
 }
 
-func WriteFileHashToDisk(filePath string, filePathMetaDataMap map[string]FileMetaData) error {
+func IsModified(projectFileHashes map[string]FileMetaData, path string) (FileMetaData, error) {
 
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+	// Check if the file exists and getting info
+	info, err := os.Stat(path)
 	if err != nil {
-		return err
+		return FileMetaData{}, err
 	}
-	defer func(file *os.File) error {
-		err := file.Close()
-		if err != nil {
-			return err
+
+	file, err := os.ReadFile(path)
+	if err != nil {
+
+		return FileMetaData{}, err
+	}
+
+	if _, exists := projectFileHashes[path]; exists {
+
+		if info.ModTime().After(projectFileHashes[path].LastModifiedTime) {
+			updatedHash := CalculateMD5(file)
+
+			if updatedHash != projectFileHashes[path].FileContentMD5Hash {
+				return FileMetaData{LastModifiedTime: info.ModTime(), FileContentMD5Hash: updatedHash}, nil
+			}
 		}
-		return nil
-	}(file)
-
-	err = GobEncoder(file, filePathMetaDataMap)
-	if err != nil {
-		return err
+	} else {
+		return FileMetaData{LastModifiedTime: info.ModTime(), FileContentMD5Hash: CalculateMD5(file)}, nil
 	}
 
-	return nil
+	return FileMetaData{}, nil
 }
 
-func ReadFileHashFromDisk(fileName string) (map[string]FileMetaData, error) {
+func DeletedFiles(projectFileHashes map[string]FileMetaData) []string {
 
-	gobfile, err := os.Open(fileName)
-	if err != nil {
-		return nil, err
+	var deletedFiles []string
+	for file, _ := range projectFileHashes {
+		if _, err := os.Stat(file); errors.Is(err, os.ErrNotExist) {
+			deletedFiles = append(deletedFiles, file)
+		}
 	}
-
-	filePathMetaDataMap := make(map[string]FileMetaData)
-
-	err = GobDecoder(gobfile, &filePathMetaDataMap)
-	if err != nil {
-		return nil, err
-	}
-
-	return filePathMetaDataMap, nil
+	return deletedFiles
 }
