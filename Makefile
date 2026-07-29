@@ -1,5 +1,5 @@
 build-cmd:
-	go build -o qwe .
+	go build -o vin .
 	sudo mv qwe /usr/local/bin
 
 cmd-first-build:

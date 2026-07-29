@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/qwe.iml" filepath="$PROJECT_DIR$/.idea/qwe.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../vinyl/.idea/vinyl.iml" filepath="$PROJECT_DIR$/../vinyl/.idea/vinyl.iml" />
     </modules>
   </component>
 </project>

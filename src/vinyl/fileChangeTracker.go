@@ -1,7 +1,8 @@
-package qwe
+package vinyl
 
 import (
 	"errors"
+	"github.com/blackfly19/vcs/src/utils"
 	"os"
 	"time"
 )
@@ -28,14 +29,14 @@ func IsModified(projectFileHashes map[string]FileMetaData, path string) (FileMet
 	if _, exists := projectFileHashes[path]; exists {
 
 		if info.ModTime().After(projectFileHashes[path].LastModifiedTime) {
-			updatedHash := CalculateMD5(file)
+			updatedHash := utils.CalculateMD5(file)
 
 			if updatedHash != projectFileHashes[path].FileContentMD5Hash {
 				return FileMetaData{LastModifiedTime: info.ModTime(), FileContentMD5Hash: updatedHash}, nil
 			}
 		}
 	} else {
-		return FileMetaData{LastModifiedTime: info.ModTime(), FileContentMD5Hash: CalculateMD5(file)}, nil
+		return FileMetaData{LastModifiedTime: info.ModTime(), FileContentMD5Hash: utils.CalculateMD5(file)}, nil
 	}
 
 	return FileMetaData{}, nil

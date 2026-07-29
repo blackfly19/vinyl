@@ -2,7 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/blackfly19/vcs/src/qwe"
+	"github.com/blackfly19/vcs/src/vinyl"
+
 	"github.com/spf13/cobra"
 )
 
@@ -13,25 +14,27 @@ var logCmd = &cobra.Command{
 }
 
 func logFunc(cmd *cobra.Command, args []string) error {
-	tree := qwe.NewTree()
-	err := tree.ReadFromDisk()
+
+	tree, err := vinyl.LoadCommitTree()
 	if err != nil {
 		return err
 	}
 
-	treeTraversal(tree.Root)
+	traversal := tree.Head
+
+	for traversal != "" {
+		treeCommit, err := tree.ReadFromDisk(traversal)
+		if err != nil {
+			return err
+		}
+		fmt.Println("Commit: ", treeCommit.CommitID)
+		fmt.Println("Date: ", treeCommit.Datetime)
+		fmt.Println("Message: ", treeCommit.Message)
+		fmt.Println()
+		traversal = treeCommit.ParentNodeCommitID
+	}
+
 	return nil
-}
-
-func treeTraversal(node *qwe.Commit) {
-	if node == nil {
-		return
-	}
-
-	fmt.Printf("%s\t%s\n", node.CommitID, node.Message)
-	for _, childNode := range node.ChildNodeAddress {
-		treeTraversal(childNode)
-	}
 }
 
 func init() {

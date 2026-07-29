@@ -1,4 +1,4 @@
-package qwe
+package vinyl
 
 import (
 	"archive/zip"
@@ -53,7 +53,7 @@ func CreateArchivesFromRoot(archiveName string, rootPath string, skipFileNames .
 			//fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", path, err)
 			return err
 		}
-		if info.IsDir() && info.Name() == ".qwe" {
+		if info.IsDir() && info.Name() == ".vinyl" {
 			return filepath.SkipDir
 		}
 

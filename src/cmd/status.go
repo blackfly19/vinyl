@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/blackfly19/vcs/src/constants"
-	"github.com/blackfly19/vcs/src/qwe"
+	"github.com/blackfly19/vcs/src/vinyl"
 	"github.com/spf13/cobra"
 	"io/fs"
 	"path/filepath"
@@ -19,9 +19,9 @@ var statusCmd = &cobra.Command{
 
 func status(cmd *cobra.Command, args []string) error {
 
-	fileMap := qwe.NewMapHandler[qwe.FileMetaData](constants.FILE_FILEHASH)
+	fileMap := vinyl.NewMapHandler[vinyl.FileMetaData](constants.FILE_FILEHASH)
 
-	err := fileMap.ReadFromDisk()
+	err := fileMap.ReadFromDisk("")
 	if err != nil {
 		return err
 	}
@@ -29,13 +29,13 @@ func status(cmd *cobra.Command, args []string) error {
 	fmt.Println("Untracked files:")
 
 	err = filepath.Walk(".", func(path string, info fs.FileInfo, err error) error {
-		if info.IsDir() && info.Name() == ".qwe" {
+		if info.IsDir() && info.Name() == ".vinyl" {
 			return filepath.SkipDir
 		}
 
 		if !info.IsDir() {
 			path = strings.TrimPrefix(path, "./")
-			metadata, err := qwe.IsModified(fileMap.FileMap, path)
+			metadata, err := vinyl.IsModified(fileMap.FileMap, path)
 			if err != nil {
 				return err
 			}
@@ -47,7 +47,7 @@ func status(cmd *cobra.Command, args []string) error {
 		return nil
 	})
 
-	deletedFiles := qwe.DeletedFiles(fileMap.FileMap)
+	deletedFiles := vinyl.DeletedFiles(fileMap.FileMap)
 
 	if len(deletedFiles) > 0 {
 		fmt.Println("Deleted files: ")

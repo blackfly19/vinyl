@@ -7,8 +7,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:     "qwe",
-	Short:   "Keep track of history of documents",
+	Use:     "vin",
+	Short:   "vinyl — a small version control system,",
+	Long:    "Vinyl records snapshots of your files over time",
 	Version: "v0.1.0",
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,

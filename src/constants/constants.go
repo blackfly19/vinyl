@@ -1,13 +1,13 @@
 package constants
 
 const (
-	DIR_QWE        = ".qwe/"
-	DIR_OBJECTS    = DIR_QWE + "objects/"
-	DIR_DIFF       = DIR_QWE + "diffFiles/"
-	DIR_STATE_TREE = DIR_QWE + "stateTrees/"
-	DIR_DIFF_MAP   = DIR_QWE + "diffFileMap/"
+	DIR_VINYL    = ".vinyl/"
+	DIR_OBJECTS  = DIR_VINYL + "objects/"
+	DIR_DIFF     = DIR_VINYL + "diffFiles/"
+	DIR_DIFF_MAP = DIR_VINYL + "diffFileMap/"
+	DIR_COMMITS  = DIR_VINYL + "commits/"
 
-	FILE_COMMITTREE = DIR_QWE + "committree"
-	FILE_FILEHASH   = DIR_QWE + "filehashes"
-	FILE_STAGING    = DIR_QWE + "staging"
+	FILE_FILEHASH = DIR_VINYL + "filehashes"
+	FILE_STAGING  = DIR_VINYL + "staging"
+	FILE_HEAD     = DIR_VINYL + "HEAD"
 )

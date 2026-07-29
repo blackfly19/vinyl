@@ -1,13 +1,7 @@
 package cmd
 
 import (
-	"github.com/blackfly19/godiff/diff"
-	"github.com/blackfly19/vcs/src/constants"
-	"os"
-	"path/filepath"
-	"reflect"
-
-	"github.com/blackfly19/vcs/src/qwe"
+	"github.com/blackfly19/vcs/src/vinyl"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +19,7 @@ var commitCmd = &cobra.Command{
 			return err
 		}
 
-		err = commit(message, checkpoint)
+		err = commit(cmd, message, checkpoint)
 		if err != nil {
 			return err
 		}
@@ -34,104 +28,31 @@ var commitCmd = &cobra.Command{
 	},
 }
 
-func commit(message string, checkpoint bool) error {
+func commit(cmd *cobra.Command, message string, checkpoint bool) error {
 
-	var commitID string
-	stagingMap := qwe.NewMapHandler[qwe.FileMetaData](constants.FILE_STAGING)
-	fileMap := qwe.NewMapHandler[qwe.FileMetaData](constants.FILE_FILEHASH)
-	diffFileMap := qwe.NewMapHandler[string](constants.DIR_DIFF_MAP)
-	tree := qwe.NewTree()
-	stateTree := qwe.NewMerkleTree()
-
-	err := stagingMap.ReadFromDisk()
+	stateTree := vinyl.NewMerkleTree()
+	commitTree, err := vinyl.LoadCommitTree()
 	if err != nil {
 		return err
 	}
 
-	err = fileMap.ReadFromDisk()
+	rootHash, err := stateTree.CreateSnapshot()
 	if err != nil {
 		return err
 	}
 
-	err = tree.ReadFromDisk()
+	err = commitTree.AddCommit(rootHash, checkpoint, message)
 	if err != nil {
 		return err
 	}
 
-	stateTree.CreateSnapshot(".")
-
-	commitID = qwe.GenerateCommitID(stateTree.Root.CompHash, message)
-
-	diffFileMap.FilePath = diffFileMap.FilePath + commitID
-
-	for path, fileMetaData := range stagingMap.FileMap {
-
-		if reflect.ValueOf(fileMetaData).IsZero() {
-			delete(fileMap.FileMap, path)
-		} else {
-			updatedFile, err := os.ReadFile(path)
-			if err != nil {
-				return err
-			}
-
-			err = qwe.CreateDataObjects(updatedFile, fileMetaData.FileContentMD5Hash)
-			if err != nil {
-				return err
-			}
-
-			if !checkpoint && tree.Root != nil {
-				var originalFile []byte
-				var objectFilePath = constants.DIR_OBJECTS + fileMap.FileMap[path].FileContentMD5Hash
-
-				objectFile, err := os.Open(objectFilePath)
-
-				err = qwe.GobDecoder(objectFile, &originalFile)
-				if err != nil {
-					return err
-				}
-
-				diffFile := diff.Encode(updatedFile, originalFile, 8)
-				diffFilePath := constants.DIR_DIFF + filepath.Base(objectFile.Name())
-
-				err = os.WriteFile(diffFilePath, diffFile, 0644)
-				if err != nil {
-					return err
-				}
-
-				diffFileMap.FileMap[diffFilePath] = path
-			}
-		}
-
-		fileMap.FileMap[path] = fileMetaData
-	}
-
-	tree.AddCommitToTree(commitID, checkpoint, message)
-	err = tree.WriteToDisk()
-	if err != nil {
-		return err
-	}
-
-	err = fileMap.WriteToDisk()
-	if err != nil {
-		return err
-	}
-
-	err = os.Remove(stagingMap.FilePath)
-	if err != nil {
-		return err
-	}
-
-	err = stateTree.WriteToDisk(commitID)
-	if err != nil {
-		return err
-	}
-
-	err = diffFileMap.WriteToDisk()
+	err = commitTree.WriteToDisk()
 	if err != nil {
 		return err
 	}
 
 	return nil
+
 }
 
 func init() {

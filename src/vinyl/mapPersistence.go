@@ -1,6 +1,7 @@
-package qwe
+package vinyl
 
 import (
+	"github.com/blackfly19/vcs/src/utils"
 	"os"
 )
 
@@ -13,8 +14,8 @@ func NewMapHandler[V any](filePath string) *MapHandler[V] {
 	return &MapHandler[V]{FilePath: filePath, FileMap: make(map[string]V)}
 }
 
-func (m *MapHandler[V]) WriteToDisk() error {
-	file, err := os.OpenFile(m.FilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+func (m *MapHandler[V]) WriteToDisk(fileName string) error {
+	file, err := os.OpenFile(m.FilePath+fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
 		return err
 	}
@@ -26,7 +27,7 @@ func (m *MapHandler[V]) WriteToDisk() error {
 		return nil
 	}(file)
 
-	err = GobEncoder(file, m.FileMap)
+	err = utils.GobEncoder(file, m.FileMap)
 	if err != nil {
 		return err
 	}
@@ -34,13 +35,13 @@ func (m *MapHandler[V]) WriteToDisk() error {
 	return nil
 }
 
-func (m *MapHandler[V]) ReadFromDisk() error {
-	gobfile, err := os.Open(m.FilePath)
+func (m *MapHandler[V]) ReadFromDisk(fileName string) error {
+	gobfile, err := os.Open(m.FilePath + fileName)
 	if err != nil {
 		return err
 	}
 
-	err = GobDecoder(gobfile, &m.FileMap)
+	err = utils.GobDecoder(gobfile, &m.FileMap)
 	if err != nil {
 		return err
 	}
