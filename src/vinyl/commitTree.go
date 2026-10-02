@@ -46,22 +46,6 @@ func (ct *CommitTree) AddCommit(merkleRoot string, checkpoint bool, message stri
 	return nil
 }
 
-func (ct *CommitTree) ReadFromDisk(fileName string) (*Commit, error) {
-	var commit *Commit
-	gobfile, err := os.Open(constants.DIR_COMMITS + fileName)
-	if err != nil {
-		return nil, err
-	}
-	defer gobfile.Close()
-
-	err = utils.GobDecoder(gobfile, &commit)
-	if err != nil {
-		return nil, err
-	}
-
-	return commit, nil
-}
-
 func (ct *CommitTree) WriteToDisk() error {
 	file, err := os.OpenFile(constants.FILE_HEAD, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {

@@ -44,11 +44,6 @@ func initFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	//Initializing file hashes
-	err = vinyl.NewMapHandler[vinyl.FileMetaData](constants.FILE_FILEHASH).WriteToDisk("")
-	if err != nil {
-		return err
-	}
 
 	fmt.Println("New empty store initialized.")
 

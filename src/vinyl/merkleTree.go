@@ -18,13 +18,8 @@ func NewMerkleTree() *MerkleTree {
 }
 
 func (tree *MerkleTree) CreateSnapshot() (string, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
 	tree.Root = &ParentNode{}
-	err = BuildMerkleTreeNodes(tree.Root, cwd)
+	err := BuildMerkleTreeNodes(tree.Root, ".")
 	if err != nil {
 		return "", err
 	}
@@ -40,7 +35,6 @@ func (tree *MerkleTree) CreateSnapshot() (string, error) {
 }
 
 func (tree *MerkleTree) GetObjectFile(path string) (string, error) {
-	var err error
 	var dataObjectFile string
 	traversal := tree.Root
 
@@ -54,10 +48,11 @@ func (tree *MerkleTree) GetObjectFile(path string) (string, error) {
 			return "", errors.New("Object not found")
 		}
 		if !traversal.ChildNodes[i].IsFile {
-			traversal, err = tree.ReadFromDisk(traversal.ChildNodes[i].CompHash)
+			subTree, err := LoadMerkleTreeNode(traversal.ChildNodes[i].CompHash)
 			if err != nil {
 				return "", err
 			}
+			traversal = subTree.Root
 		} else {
 			dataObjectFile = traversal.ChildNodes[i].CompHash
 		}
@@ -71,7 +66,7 @@ func (tree *MerkleTree) GetObjectFile(path string) (string, error) {
 
 }
 
-func (tree *MerkleTree) ReadFromDisk(hash string) (*ParentNode, error) {
+func LoadMerkleTreeNode(hash string) (*MerkleTree, error) {
 	var parentNode ParentNode
 	gobfile, err := os.Open(constants.DIR_OBJECTS + hash)
 	if err != nil {
@@ -84,7 +79,7 @@ func (tree *MerkleTree) ReadFromDisk(hash string) (*ParentNode, error) {
 		return nil, err
 	}
 
-	return &parentNode, nil
+	return &MerkleTree{Root: &parentNode}, nil
 }
 
 func BuildMerkleTreeNodes(root *ParentNode, previousPath string) error {
@@ -95,7 +90,7 @@ func BuildMerkleTreeNodes(root *ParentNode, previousPath string) error {
 	}
 
 	for _, file := range files {
-		if file.Name()+"/" == constants.DIR_QWE {
+		if file.Name()+"/" == constants.DIR_VINYL {
 			continue
 		}
 		if file.IsDir() {

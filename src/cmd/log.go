@@ -23,7 +23,7 @@ func logFunc(cmd *cobra.Command, args []string) error {
 	traversal := tree.Head
 
 	for traversal != "" {
-		treeCommit, err := tree.ReadFromDisk(traversal)
+		treeCommit, err := vinyl.LoadCommit(traversal)
 		if err != nil {
 			return err
 		}

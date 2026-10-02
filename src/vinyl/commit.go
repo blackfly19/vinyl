@@ -35,3 +35,19 @@ func (c *Commit) WriteToDisk(fileName string) error {
 
 	return nil
 }
+
+func LoadCommit(commitID string) (*Commit, error) {
+	var commit *Commit
+	gobfile, err := os.Open(constants.DIR_COMMITS + commitID)
+	if err != nil {
+		return nil, err
+	}
+	defer gobfile.Close()
+
+	err = utils.GobDecoder(gobfile, &commit)
+	if err != nil {
+		return nil, err
+	}
+
+	return commit, nil
+}
